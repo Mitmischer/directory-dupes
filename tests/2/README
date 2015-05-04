@@ -1,0 +1,4 @@
+Tests dropping of unique folders.
+
+Expected output: fl1/dup1 is purged from the tree.
+                 fl2/dup1 remains in the tree.
