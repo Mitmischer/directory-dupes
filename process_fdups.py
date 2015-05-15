@@ -1,10 +1,34 @@
 #!/usr/bin/python3
-
 import os
 import sys
 import getopt
 import pickle
-from weakref import WeakSet
+
+# Idee zum Algorithmus:
+# Problem
+# fl1 ist die Dateien betreffend identisch zu fl2, enthält aber zusätzlich noch zwei Unterordner fl5 und fl6, die identisch zu fl3
+# und fl4 (jew.) sind. Der Algorithmus bearbeitet zuerst fl3 und fl4, sodass fl5 und fl6 verschwinden.
+# ==> fl1 und fl2 werden fälschlicherweise als identisch identifiziert.
+
+# ==> Dagegen ist weder der "UID-Algorithmus" (also Vergleich aller Nodes, eine bestimmte UID enthalten) noch
+#                           Lars Algorithmus (also iterativer Vergleich aller tiefsten Knoten) gefeit.
+# naiv: Hashen des ganzen Ordners und seiner Kinder, Sichern des Hashes (Cache), Vergleichen der Hashes.
+#  Problem: Wie finde ich effizient Ordner mit gleichen Hashes? Vllt. mit derselben Idee wie lowest_udid/highest_udid?
+#
+# Idee: Ordnervergleiche sind teuer! Deswegen Cache führen mit Nodes, zu denen man identisch ist - über eine ID, die pro Node nur einmal vergeben wird
+#       oder Cache mit Hashes führen.
+
+
+# Nochmal von vorn:
+# Idee: ursprünglicher Algorithmus und gut mit Unterordnern umgehen.
+#       oder: tiefste Nodes t_i mit identischen Dateien suchen.
+#             Betrachte danach die jeweiligen Väterknoten v_i.
+#             !Diese können nur noch untereinander identisch und nicht identisch zu irgendwelchen anderen Ordnern sein, denn etwaigen anderen Ordnern
+#              fehlt der Unterordner t_i! Ist das nutzbar?
+#             Achtung! Die v_i müssen separiert werden, denn ihre t_i sind nicht zwingend untereinander identisch!
+#                      Vergleiche nur diejenigen v_i, deren t_i identisch sind.
+#                      Ein v_i, dessen t_i zu keinem anderen Unterordner identisch war, ist für diesen v_i einzigartig. Entferne diesen v_i vom Baum.
+#             Problem: Was tun, falls die v_i mehr als Ordner haben? Dann wird die Separierung ein riesiges Chaos..
 
 class ProgressPrinter:
     def __init__(self):
@@ -13,7 +37,7 @@ class ProgressPrinter:
         self.message = ""
 
     def print(self):
-        if self.current % 500:
+        if self.current % 500 == 0:
             sys.stdout.write("\r{0}... [{1:.2%}]".format(self.message, self.current/self.total))
 
     def set_total(self, total):
@@ -37,11 +61,8 @@ class ProgressPrinter:
 pprinter = ProgressPrinter()
 
 
-#udid finden;
-#jeder Node befragt jeden seiner Subnodes. Jeder Subnode, der ein Node ist, befragt seinerseits seine Subnodes.
-#Jeder Subnode, der ein Leaf ist, gibt True zurück, falls er fündig wurde und false sonst.
-#Optimierung: Jeder Node speichert nicht alle, sondern nur den größten und kleinsten Wert seiner Leafs und kann so
-#schnell bestimmen, dass er einen Eintrag ganz sicher nicht enthält (nicht aber, dass er ihn bestimmt enthält.)
+#TODO: in Ast und Blatt trennen.
+
 class Node:
     # every node has one parent and indefinitely many children.
     # only specify a udid for leafs.
@@ -50,7 +71,107 @@ class Node:
         self.parent = None
         self.children = []
         # References other nodes that are equal according to fdupes
-        self.udids = []
+        self.udid = udid
+        self.highest_udid = None
+        self.lowest_udid = None
+
+    def find_deepest_nodes(self):
+        nodes = [child for child in self.children if child.children]
+
+        deepest_nodes = []
+        if nodes:
+            for node in nodes:
+                deepest_nodes += node.find_deepest_nodes()
+            return deepest_nodes
+        # self is a deepest node.
+        else:
+            return self
+
+    def remove(self):
+        for child in self.children:
+            child.remove()
+
+        if self.is_leaf():
+            save_parent = self.parent
+            self.parent = None
+            save_parent.remove_if_empty(self.parent)
+
+
+    def find_file(self, udid):
+        # we don't have that udid.
+        if udid > self.highest_udid or udid < self.lowest_udid:
+            return []
+
+        found_files = []
+        # else: this node or one or more of its children-nodes hold this udid.
+        for child in self.children:
+            if child.is_leaf():
+                if child.udid == udid:
+                    found_files += [child]
+            else:
+                found_files += child.find_file(udid)
+
+        return found_files
+
+    # removes this node and every parent node that would then become empty.
+    def remove_if_empty(self):
+        # drop all children that seperated themselves from the tree
+        self.children = [child for child in self.children if self.parent]
+        if not self.children:
+            save_parent = self.parent
+            self.parent = None
+            save_parent.remove_if_empty(self.parent)
+
+    # recursively propagate a change in udid.
+    def udid_added(self, udid):
+        assert bool(self.children) # do not call on leafs
+        if not self.highest_udid or udid > self.highest_udid:
+            self.highest_udid = udid
+        if not self.lowest_udid or udid< self.lowest_udid:
+            self.lowest_udid = udid
+        if self.parent:
+            self.parent.udid_added(udid)
+
+    def udid_removed(self, udid):
+        assert bool(self.children) # do not call on leafs
+        assert( self.lowest_udid <= udid <= self.highest_udid )
+
+        if self.lowest_udid != udid and self.highest_udid != udid:
+            return
+
+        children = [child for child in self.children if not child.children]
+        nodes = [child for child in self.children if child.children]
+
+        # find a new lower bound if the old one was removed.
+        if self.lowest_udid == udid:
+            # either children or nodes is not empty
+            new_lowest_udid = children[0].udid if bool(children) else nodes[0].lowest_udid
+            for child in children:
+                new_lowest_udid = min(new_lowest_udid, child.udid)
+            for node in nodes:
+                new_lowest_udid = min(new_lowest_udid, node.lowest_udid)
+            self.lowest_udid = new_lowest_udid
+
+        # find a new upper bound if the old one was removed.
+        if self.highest_udid == udid:
+            # either children or nodes is not empty
+            new_highest_udid = children[0].udid if bool(children) else nodes[0].highest_udid # children[0] exists (see first assertion)
+            for child in children:
+                new_highest_udid = min(new_highest_udid, child.udid)
+            for node in nodes:
+                new_highest_udid = min(new_highest_udid, node.lowest_udid)
+            self.lowest_udid = new_highest_udid
+
+        if self.parent:
+            self.parent.udid_removed(udid)
+
+    def set_udid(self, udid):
+        assert not self.children # call on leafs only
+        save_udid = self.udid
+        self.udid = udid
+        self.parent.udid_added(udid)
+        if save_udid:
+            self.parent.udid_removed(save_udid)
 
     # Returns file and folder counts (recursively, top-down).
     def stats(self, file_count=0, folder_count=0):
@@ -74,19 +195,25 @@ class Node:
     def is_leaf(self):
         return not self.children
 
-    # add udid to self and to every parent.
-    # Makes this node a leaf.
-    def add_udid(self, udid):
-        # we can't make this node a leaf if there are children.
-        #if self.children:
-        #    assert(false)
-        self.udids.append(udid)
-        if self.parent:
-            self.parent.add_udid(udid)
-
     def add_child(self, node):
         self.children.append(node)
         node.parent = self
+
+    # true if this node holds the same files
+    # false if one of those folders holds files that the other one does not.
+    # Note: The nodes have equal content, if they share one set of udids.
+    # undefined if this node owns other nodes.
+    def equal_content(self, node):
+        # do only call on nodes that do not have any nodes.
+        assert not [child for child in self.children if child.children]
+        assert not [child for child in self.children if child.children]
+        my_udids =    [child.udids for child in self.children]
+        other_udids = [child.udids for child in node.children]
+
+        my_udids.sort()
+        other_udids.sort()
+
+        return my_udids == other_udids
 
     def has_child(self, name):
         return name in [c.name for c in self.children]
@@ -100,20 +227,17 @@ class Node:
 
     def print_recursive(self, level=0):
         indent = "  " * level
-        print(indent + self.name + ", UDIDS={0}".format(self.udids))
+        if self.is_leaf():
+            print(indent + self.name + ", UDID={0}".format(self.udid))
+        else:
+            print(indent + self.name + ", UDIDS=[{0}...{1}]".format(self.lowest_udid, self.highest_udid))
         for child in self.children:
             child.print_recursive(level+1)
-
-    # recursively
-    # necessary as leaf removal might lead to folders being leafs. That is not legal and such folder must be purged.
-    def remove_if_empty(self):
-        if not self.children:
-            self.parent = None
 
 
     def drop_leafs(self):
         # Nodes, die keine Kinder mehr haben, löschen (rekursiv nach oben)
-        # ==> sicherstellen, dass keine Ordner Leafs sind (illegal!)
+        #TODO: ==> sicherstellen, dass keine Ordner Leafs sind (illegal!)
         # leaf = no children
         self.children = [c for c in self.children if c.children]
 
@@ -128,6 +252,24 @@ class Node:
                 else:
                     return ""
             return self.name
+
+    # sum of leaf IDs multiplied by their number, added to the subnodes' hashes, if any.
+    # todo: für eine Hashfunktion sehr teuer - Cache einbauen.
+    def hash(self):
+        leafs = [child for child in self.children if not child.children]
+        nodes = [child for child in self.children if child.children]
+
+        sum = 0
+        for leaf in leafs:
+            sum += leaf.udid
+
+        sum *= len(leafs)
+
+        for node in nodes:
+            sum += node.hash()
+
+        return sum
+
 
 def build_tree(lines):
     global pprinter
@@ -167,7 +309,7 @@ def build_tree(lines):
                 current_node.add_child(new_node)
                 current_node = new_node
         # current_node is now a leaf.
-        current_node.add_udid(unique_duplicate_id)
+        current_node.set_udid(unique_duplicate_id)
         folder_count -= 1
         file_count += 1
 
@@ -219,12 +361,51 @@ def drop_unique_folders(node):
     node.children = [c for c in node.children if c.parent]
 
 
-
 def update_checkpoint_file(file_name, state):
     #todo: tempfile und dann verschieben.
     print("Checkpoint - saving program state to disk...")
     file = open(file_name, "wb")
     pickle.dump(state, file)
+
+# Achtung - funktioniert so noch nicht
+# Das soll später der eigentliche Algorithmus werden.
+def find_equal_folders(root):
+    result = ""
+    # root holds the highest udid.
+    highest_udid = tree.highest_udid
+    for i in range(0, highest_udid+1):
+        # find all nodes with this udid.
+        equal_files = root.find_file(i)
+        if not equal_files:
+            # an earlier invocation found the parent folder's of i to be equal and moved them to the result tree.
+            continue
+        if len(equal_files) == 1:
+            # an invocation of drop_unique_folders removed the related twin path.
+            # drop the whole node! it now has a file with no duplicates that will prohibit matching
+            #TODO: das stimmt so nicht für teilweises Matching (also Subset-Bestimmung).
+            equal_files[0].children = None
+            equal_files[0].parent.remove_if_empty()
+            continue
+
+        # check all the parent nodes for equality, pairwisely.
+        parent_nodes = [child.parent for child in equal_files]
+        #TODO: pairwisely - bisher nur Vergleich mit dem ersten.
+        check_node = parent_nodes[0]
+        identical_nodes = []
+        #skip the first node.
+        for i in range(1,len(parent_nodes)):
+            check_node2 = parent_nodes[i]
+            # make sure that the checked nodes only have leafs, no other nodes
+            assert not [child for child in check_node2 if check_node2.children]
+
+            #those folders are identical.
+            if check_node.equal_content(check_node2):
+                identical_nodes.append(check_node)
+
+        # extract identical nodes and save them to the output
+        check_node.path()
+
+
 
 def main():
     global pprinter
@@ -297,7 +478,6 @@ def main():
     print("{0} folders.".format(_folder_count))
 
     update_checkpoint_file(checkpoint_file,(_file_count, _folder_count, tree))
-
 
 
 if __name__ == "__main__":
