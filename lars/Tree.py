@@ -88,6 +88,7 @@ class Node:
         :rtype : Node
         """
         self.isFile=isFile
+        self.potentialDup=True
         self.path=path
         self.name=name
         self.id=id
@@ -103,13 +104,6 @@ class Node:
             print("overwriting parent")
         self.parent=parent
 
-    def isDuplicate(self):
-        if self.isFile:
-            return True
-        elif self.children==[]:
-            return False
-        else:
-            return reduce(lambda x,y: x.isDuplicate() and y.isDuplicate, self.children)
 
     def dfs_insert(self,node):
 
@@ -182,11 +176,16 @@ class Node:
                 child.dfs_create_checksums()
                 children_checksums.append(child.checksum.digest())
 
-            children_checksums.sort()
-            self.checksum=md5()
-            for child_checksum in children_checksums:
-                self.checksum.update(child_checksum)
-            return
+            if self.potentialDup:
+                children_checksums.sort()
+                self.checksum=md5()
+                for child_checksum in children_checksums:
+                    self.checksum.update(child_checksum)
+                return
+            else:
+                #this is not a duplicate, give it a checksum no duplicate could have, so that it is not accidentally found
+                self.checksum=md5()
+                self.checksum.update(str(-1).encode("utf-8"))
 
     def dfs_print_graphml(self,file):
         print("<node id=\""+self.name+"\" />",file=file)
@@ -204,29 +203,32 @@ class Node:
         Check if this could potentially be a duplicate.
         Return True if yes, False otherwise
         """
+        # if this is a file, found by fdupes, it can be a duplicate
         if self.isFile:
             return True
 
-        num_files=os.listdir("./"+"/".join(self.path)+"/"+self.name+"")
-        children_to_be_removed=[]
+        # if the folder contains a subfolder which is not a duplicate, it isn't a duplicate itself
         for child in self.children:
             if not child.dfs_treeshake():
-                children_to_be_removed.append(child)
+                self.potentialDup=False
 
+        # each child in the tree was created by fdupes and is a potential duplicate
+        # if there are more subfolders / files in this dir than there are children, this is not a duplicate
+        num_files=os.listdir("./"+"/".join(self.path)+"/"+self.name+"")
+        print(os.listdir("./"+"/".join(self.path)+"/"+self.name+""))
         if len(num_files)>len(self.children):
+            self.potentialDup=False
             return False
-        for child in children_to_be_removed:
-            self.children.remove(child)
 
-        if not self.children:
-            return self.isFile
-
-        return True
+        return self.potentialDup
 
     def dfs_generate_checksum_list(self,checksum_list):
         for child in self.children:
             child.dfs_generate_checksum_list(checksum_list)
-        checksum_list.append(self.checksum.digest())
+
+        # only if this is a potential duplicate, check its filesum
+        if self.potentialDup:
+            checksum_list.append(self.checksum.digest())
         return checksum_list
 
 
