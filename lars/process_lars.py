@@ -9,7 +9,7 @@ if __name__=="__main__":
 
     print(os.listdir("."))
     call("fdupes -r sample/ > out.txt",shell=True)
-    
+
     with open("out.txt") as file:
         duplicates={}
         id=0

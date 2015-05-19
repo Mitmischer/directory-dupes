@@ -8,3 +8,6 @@ sample/a_copy/file1
 sample/b/file1
 sample/b_copy/file1
 
+sample/b/file3
+sample/b_copy/file3
+
