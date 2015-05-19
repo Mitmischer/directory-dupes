@@ -1,0 +1,12 @@
+a set of dups
+sample/a/file1
+sample/a_copy/file1
+-----------------------
+a set of dups
+sample/a/file2
+sample/a_copy/file2
+-----------------------
+a set of dups
+sample/a
+sample/a_copy
+-----------------------

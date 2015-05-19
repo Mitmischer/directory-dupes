@@ -1,0 +1,10 @@
+sample/a/file2
+sample/a_copy/file2
+sample/b/file2
+sample/b_copy/file2
+
+sample/a/file1
+sample/a_copy/file1
+sample/b/file1
+sample/b_copy/file1
+
