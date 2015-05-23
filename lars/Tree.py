@@ -314,7 +314,8 @@ class Node:
         :rtype: None
         """
         for child in self.children:
-            print(("".join(self.path)+self.name).replace("/","_").replace("\n","")+"->"+("".join(child.path)+child.name).replace("/","_").replace("\n","")+";",file=file)
+            #print(("".join(self.path)+self.name).replace("/","_").replace("\n","")+"->"+("".join(child.path)+child.name).replace("/","_").replace("\n","")+";",file=file)
+            print("\""+"/".join(self.path)+"/"+self.name+"\""+"->"+"\""+"/".join(child.path)+"/"+child.name+"\"",file=file)
             child.dfs_print_graphdot(file)
 
     def dfs_treeshake(self):
