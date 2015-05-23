@@ -12,5 +12,4 @@ sample/b_copy/file1
 
 sample/b/file3
 sample/c/file3
-sample/b_copy/file3
 

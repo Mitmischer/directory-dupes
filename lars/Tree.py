@@ -236,6 +236,11 @@ class Node:
         return duplicates
 
     def dfs_search_for_path(self,path):
+        """
+        returns the node that matches this path
+        :param path: a list of filenames as strings
+        :rtype: Node
+        """
         if self.name!=path[0]:
             raise Exception("the dfs has led to a problem")
         elif len(path)>1:
@@ -248,6 +253,11 @@ class Node:
             return self
 
     def dfs_search_for_partial_path(self,path):
+        """
+        returns the longest slice of the path that exists in this tree as a node
+        :param path: a list of filenames as strings
+        :rtype: Node
+        """
         if self.name!=path[0]:
             raise Exception("the dfs has led to a problem")
         elif len(path)>1:
@@ -260,6 +270,10 @@ class Node:
             return self
 
     def dfs_create_checksums(self):
+        """
+        computes a checksum for all nodes
+        :rtype: None
+        """
         if self.children==[]:
             self.checksum=md5()
             self.checksum.update(str(self.id).encode("utf-8"))
@@ -283,12 +297,22 @@ class Node:
                 self.checksum.update(str(-1).encode("utf-8"))
 
     def dfs_print_graphml(self,file):
+        """
+        prints the graphml data of this node to the file
+        :param file: file which contains the data for this tree
+        :rtype: None
+        """
         print("<node id=\""+self.name+"\" />",file=file)
         for child in self.children:
             child.dfs_print_graphml(file)
             print("<edge source=\""+self.name+"\" target=\""+child.name+"\"/>",file=file)
 
     def dfs_print_graphdot(self,file):
+        """
+        prints the graphdot data of this node to the file
+        :param file: file which contains the data for this tree
+        :rtype: None
+        """
         for child in self.children:
             print(("".join(self.path)+self.name).replace("/","_").replace("\n","")+"->"+("".join(child.path)+child.name).replace("/","_").replace("\n","")+";",file=file)
             child.dfs_print_graphdot(file)
@@ -318,6 +342,11 @@ class Node:
         return self.potentialDup
 
     def dfs_generate_checksum_list(self,checksum_list):
+        """
+        generates a list of all the checksums of nodes in the tree which are potential checksums
+        :param checksum_list: a list of all checksums computed so far, call with an empty list
+        :rtype: []
+        """
         for child in self.children:
             child.dfs_generate_checksum_list(checksum_list)
 
@@ -329,6 +358,12 @@ class Node:
 
 
 if __name__=="__main__":
+
+    # attention:
+    # the treeshake algorithm only works for real files and folders
+    # therefore only the printing as graphs is tested
+
+
     print("testing the tree")
     root=Node(False,[],"sample",-1)
     tree=Tree(root)
@@ -341,20 +376,4 @@ if __name__=="__main__":
 
     tree.print_graphml("test.graphml")
     tree.print_graphdot("test.graphdot")
-    tree.treeshake()
-    tree.create_checksums()
-    checksum_list=tree.generate_checksum_list()
-    print(len(checksum_list))
-    print("these checksums appear more than once")
-    print([x for x, y in Counter(checksum_list).items() if y > 1])
 
-    print("these folder/files have identical checksums")
-    dups=tree.find_all_duplicates("dups_found.txt")
-    print(dups)
-
-    for key in dups:
-        print("a set of dups")
-        for value in dups[key]:
-            print("".join(value.path)+value.name)
-
-        print("-----------------------")

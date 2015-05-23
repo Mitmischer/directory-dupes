@@ -1,17 +1,18 @@
 a set of dups
-sample/c/file1
------------------------
-a set of dups
-sample/b
-sample/b_copy
------------------------
-a set of dups
+sample/b/file3
 sample/c/file3
+-----------------------
+a set of dups
+sample/b/file2
+sample/c/file2
+sample/b_copy/file2
 -----------------------
 a set of dups
 sample/a
 sample/a_copy
 -----------------------
 a set of dups
-sample/c/file2
+sample/b/file1
+sample/c/file1
+sample/b_copy/file1
 -----------------------
