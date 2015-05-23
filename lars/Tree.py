@@ -26,14 +26,31 @@ class Tree:
 
     def treeshake(self):
         print("_--------------")
-        print(os.listdir("./sample/"))
-        if self.root.dfs_treeshake():
-            print("treeshake finished, there are potential dups")
-            return
-        else:
-            print("the tree doesn't contain any duplicates")
+        self.root.dfs_treeshake()
 
-    def find_duplicates(self,filename):
+    def find_toplevel_duplicates(self,filename):
+        self.treeshake()
+        self.create_checksums()
+        checksum_list=self.generate_checksum_list()
+        duplicate_checksums=[x for x, y in Counter(checksum_list).items() if y > 1]
+        duplicates={}
+        if duplicate_checksums:
+            print("there are folders or files with the same checksum")
+            print(duplicate_checksums)
+            duplicates=self.root.dfs_generate_duplicate_list(duplicate_checksums,duplicates)
+
+            file=open(filename,"w")
+            for key in duplicates:
+                print("a set of dups",file=file)
+                for value in duplicates[key]:
+                    print("/".join(value.path)+"/"+value.name,file=file)
+
+                print("-----------------------",file=file)
+
+        return duplicates
+
+
+    def find_all_duplicates(self,filename):
         self.treeshake()
         self.create_checksums()
         checksum_list=self.generate_checksum_list()
@@ -96,14 +113,6 @@ class Node:
         self.parent=None
         self.checksum=None
 
-    def addChild(self,child):
-        self.children.append(child)
-
-    def setParent(self,parent):
-        if(parent!=None):
-            print("overwriting parent")
-        self.parent=parent
-
 
     def dfs_insert(self,node):
 
@@ -139,6 +148,19 @@ class Node:
         for child in self.children:
             dups_list=child.dfs_search_for_checksum(checksum,dups_list)
         return dups_list
+
+    def dfs_generate_duplicate_list(self,checksum_list, duplicates):
+        checksum_string=self.checksum.digest()
+
+        if checksum_string in checksum_list:
+            if checksum_string in duplicates:
+                duplicates[checksum_string].append(self)
+            else:
+                duplicates[checksum_string]=[self]
+        else:
+            for child in self.children:
+                duplicates=child.dfs_generate_duplicate_list(checksum_list,duplicates)
+        return duplicates
 
     def dfs_search_for_path(self,path):
         if self.name!=path[0]:
@@ -235,13 +257,13 @@ class Node:
 
 if __name__=="__main__":
     print("testing the tree")
-    root=Node(False,[],"/sample",-1)
+    root=Node(False,[],"sample",-1)
     tree=Tree(root)
     for i in range(3):
-        node=Node(False,["/sample"],"/subfolder"+str(i),-1)
+        node=Node(False,["sample"],"subfolder"+str(i),-1)
         tree.insert(node)
         for j in range(3):
-            node=Node(True,["/sample","/subfolder"+str(i)],"/subsubfolder"+str(i)+str(j),-1)
+            node=Node(True,["sample","subfolder"+str(i)],"ssubsubfolder"+str(i)+str(j),-1)
             tree.insert(node)
 
     tree.print_graphml("test.graphml")
@@ -251,10 +273,10 @@ if __name__=="__main__":
     checksum_list=tree.generate_checksum_list()
     print(len(checksum_list))
     print("these checksums appear more than once")
-    print([x for x, y in collections.Counter(checksum_list).items() if y > 1])
+    print([x for x, y in Counter(checksum_list).items() if y > 1])
 
     print("these folder/files have identical checksums")
-    dups=tree.find_duplicates("dups_found.txt")
+    dups=tree.find_all_duplicates("dups_found.txt")
     print(dups)
 
     for key in dups:

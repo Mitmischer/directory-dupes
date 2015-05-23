@@ -4,30 +4,30 @@
     xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
      http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
   <graph id="G" edgedefault="undirected">
-<node id="/sample" />
-<node id="/subfolder0" />
-<node id="/subsubfolder00" />
-<edge source="/subfolder0" target="/subsubfolder00"/>
-<node id="/subsubfolder01" />
-<edge source="/subfolder0" target="/subsubfolder01"/>
-<node id="/subsubfolder02" />
-<edge source="/subfolder0" target="/subsubfolder02"/>
-<edge source="/sample" target="/subfolder0"/>
-<node id="/subfolder1" />
-<node id="/subsubfolder10" />
-<edge source="/subfolder1" target="/subsubfolder10"/>
-<node id="/subsubfolder11" />
-<edge source="/subfolder1" target="/subsubfolder11"/>
-<node id="/subsubfolder12" />
-<edge source="/subfolder1" target="/subsubfolder12"/>
-<edge source="/sample" target="/subfolder1"/>
-<node id="/subfolder2" />
-<node id="/subsubfolder20" />
-<edge source="/subfolder2" target="/subsubfolder20"/>
-<node id="/subsubfolder21" />
-<edge source="/subfolder2" target="/subsubfolder21"/>
-<node id="/subsubfolder22" />
-<edge source="/subfolder2" target="/subsubfolder22"/>
-<edge source="/sample" target="/subfolder2"/>
+<node id="sample" />
+<node id="subfolder0" />
+<node id="subsubfolder00" />
+<edge source="subfolder0" target="subsubfolder00"/>
+<node id="subsubfolder01" />
+<edge source="subfolder0" target="subsubfolder01"/>
+<node id="subsubfolder02" />
+<edge source="subfolder0" target="subsubfolder02"/>
+<edge source="sample" target="subfolder0"/>
+<node id="subfolder1" />
+<node id="subsubfolder10" />
+<edge source="subfolder1" target="subsubfolder10"/>
+<node id="subsubfolder11" />
+<edge source="subfolder1" target="subsubfolder11"/>
+<node id="subsubfolder12" />
+<edge source="subfolder1" target="subsubfolder12"/>
+<edge source="sample" target="subfolder1"/>
+<node id="subfolder2" />
+<node id="subsubfolder20" />
+<edge source="subfolder2" target="subsubfolder20"/>
+<node id="subsubfolder21" />
+<edge source="subfolder2" target="subsubfolder21"/>
+<node id="subsubfolder22" />
+<edge source="subfolder2" target="subsubfolder22"/>
+<edge source="sample" target="subfolder2"/>
 </graph>
 </graphml>
