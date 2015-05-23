@@ -7,38 +7,70 @@ import os
 class Tree:
     def __init__(self,root):
         """
-
+        :param root: root Node
         :rtype : Tree
         """
         self.root=root
 
     def search(self,path):
+        """
+        :param path: a list of filenames
+        :rtype: Node
+        """
         return self.root.dfs_path(path)
 
     def insert(self,node):
+        """
+        Inserts a node into the tree, a correct structure of parent nodes for the path is created automatically
+        :param node: Node
+        :rtype: None
+        """
         self.root.dfs_insert(node)
 
+    def treeshake(self):
+        """
+        takes a look at all nodes in the tree and checks wether they are potential duplicates
+        :rtype: None
+        """
+        self.root.dfs_treeshake()
+
     def create_checksums(self):
+        """
+        looks at all nodes in the tree,
+        if the node is a potential duplicate, a valid checksum is created
+        if the node is no potential duplicate, -1 is hashed as checksum
+        :rtype: None
+        """
         self.root.dfs_create_checksums()
 
     def generate_checksum_list(self):
+        """
+        returns a list of all valid checksums in the tree
+        :rtype: []
+        """
         return self.root.dfs_generate_checksum_list([])
 
-    def treeshake(self):
-        print("_--------------")
-        self.root.dfs_treeshake()
-
     def find_toplevel_duplicates(self,filename):
+        """
+        :param filename: the name of an existing file to be overwritten with information about duplicates
+        :rtype: None
+        """
+
         self.treeshake()
         self.create_checksums()
         checksum_list=self.generate_checksum_list()
         duplicate_checksums=[x for x, y in Counter(checksum_list).items() if y > 1]
+
+        #this dictionary contains checksums as keys and for each key a list of nodes with this checksum
         duplicates={}
+
         if duplicate_checksums:
             print("there are folders or files with the same checksum")
-            print(duplicate_checksums)
-            duplicates=self.root.dfs_generate_duplicate_list(duplicate_checksums,duplicates)
 
+            # traverse the tree, each node compares its own checksum to the list of duplicate checksums
+            duplicates=self.root.dfs_find_toplevel_duplicates(duplicate_checksums,duplicates)
+
+            #write results to file
             file=open(filename,"w")
             for key in duplicates:
                 print("a set of dups",file=file)
@@ -51,14 +83,22 @@ class Tree:
 
 
     def find_all_duplicates(self,filename):
+        """
+        :param filename: the name of an existing file to be overwritten with information about duplicates
+        :rtype: None
+        """
+
         self.treeshake()
         self.create_checksums()
         checksum_list=self.generate_checksum_list()
         duplicate_checksums=[x for x, y in Counter(checksum_list).items() if y > 1]
+
+        #this dictionary contains checksums as keys and for each key a list of nodes with this checksum
         duplicates={}
+
         if duplicate_checksums:
             print("there are folders or files with the same checksum")
-            print(duplicate_checksums)
+
             for dup_checksum in duplicate_checksums:
                 duplicates[dup_checksum]=[]
                 self.root.dfs_search_for_checksum(dup_checksum,duplicates[dup_checksum])
@@ -75,6 +115,10 @@ class Tree:
 
 
     def print_graphml(self,filename):
+        """
+        :param filename: name of an existing file to be overwritten with a graph in graphml format
+        :rtype: None
+        """
         file=open(filename,"w")
         print("""<?xml version="1.0" encoding="UTF-8"?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns"
@@ -82,54 +126,69 @@ class Tree:
     xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
      http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
   <graph id="G" edgedefault="undirected">""",file=file)
+
         self.root.dfs_print_graphml(file)
+
         print("""</graph>
 </graphml>""",file=file)
+
         file.flush()
         file.close()
 
     def print_graphdot(self,filename):
-            file=open(filename,"w")
-            print("""digraph filesystem {""",file=file)
-            self.root.dfs_print_graphdot(file)
-            print("""}""",file=file)
-            file.flush()
-            file.close()
+        """
+        :param filename: name of an existing file to be overwritten with a graph in graphdot format
+        :rtype: None
+        """
+        file=open(filename,"w")
+        print("""digraph filesystem {""",file=file)
+
+        self.root.dfs_print_graphdot(file)
+
+        print("""}""",file=file)
+        file.flush()
+        file.close()
 
 
 
 class Node:
-    def __init__(self, isFile,path, name, id):
+    def __init__(self, isFile, path, name, id):
         """
 
+        :param isFile: has this been found by fdupes ? is it a file ?
+        :param path: a list of foldernames as strings
+        :param name: name of this file/folder
+        :param id: if this was found by fdupes, set to correct id, -1 otherwise
         :rtype : Node
         """
         self.isFile=isFile
-        self.potentialDup=True
         self.path=path
         self.name=name
         self.id=id
         self.children=[]
-        self.parent=None
+
+        #so far, we don't know anything about this node
+        self.potentialDup=True
         self.checksum=None
 
 
     def dfs_insert(self,node):
-
-        # we need to insert the node in the tree
-        # first: search how much of the folder structure is already there
         """
-
+        inserts the node into the tree and creates a correct structure of nodes for the path
+        :param node:Node to be inserted into the tree
         :type node: None
         """
         node_path=node.path.copy()
+
+        # search for the path in the tree, it's not going to exist completely
+        # this method returns the "longest match"
         current_node=self.dfs_search_for_partial_path(node_path)
 
         # get the path that was found
         partial_path=current_node.path.copy()
         partial_path.append(current_node.name)
 
-        # this path has to be created by hand
+        # this is the rest, which has to be created by hand
         path_rest=node_path[len(partial_path):len(node_path)]
 
         current_path=partial_path
@@ -143,13 +202,27 @@ class Node:
         current_node.children.append(node)
 
     def dfs_search_for_checksum(self,checksum,dups_list):
+        """
+        compares the checksum of all nodes (dfs) with this checksum, each math is appended to the list
+        :param checksum: checksum string, already digested
+        :param dups_list: list of nodes with this checksum
+        :rtype: []
+        """
         if self.checksum.digest()==checksum:
             dups_list.append(self)
         for child in self.children:
             dups_list=child.dfs_search_for_checksum(checksum,dups_list)
         return dups_list
 
-    def dfs_generate_duplicate_list(self,checksum_list, duplicates):
+    def dfs_find_toplevel_duplicates(self,checksum_list, duplicates):
+        """
+        compares the checksum of all nodes (dfs) to the checksum_list,
+        if a match is found, the dfs returns
+        only the most toplevel match is appended to the dict of duplicates
+        :param duplicates: a dict of duplicates
+        :param checksum_list: a list of duplicate checksums
+        :rtype:{]
+        """
         checksum_string=self.checksum.digest()
 
         if checksum_string in checksum_list:
@@ -159,7 +232,7 @@ class Node:
                 duplicates[checksum_string]=[self]
         else:
             for child in self.children:
-                duplicates=child.dfs_generate_duplicate_list(checksum_list,duplicates)
+                duplicates=child.dfs_find_toplevel_duplicates(checksum_list,duplicates)
         return duplicates
 
     def dfs_search_for_path(self,path):

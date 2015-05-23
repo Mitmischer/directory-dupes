@@ -3,13 +3,13 @@ sample/b
 sample/b_copy
 -----------------------
 a set of dups
-sample/c/file1
+sample/c/file3
 -----------------------
 a set of dups
 sample/c/file2
 -----------------------
 a set of dups
-sample/c/file3
+sample/c/file1
 -----------------------
 a set of dups
 sample/a
