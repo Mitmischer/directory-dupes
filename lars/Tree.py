@@ -73,11 +73,16 @@ class Tree:
             #write results to file
             file=open(filename,"w")
             for key in duplicates:
+                duplicates[key].sort(key=lambda tuple:tuple[0],reverse=True)
+                if duplicates[key][0][0]==False:
+                    continue
                 print("a set of dups",file=file)
                 for value in duplicates[key]:
                     (toplevel,node)=value
                     if toplevel:
                         print("/".join(node.path)+"/"+node.name,file=file)
+                    else:
+                        print("non-toplevel occurences: "+"/".join(node.path)+"/"+node.name,file=file)
 
                 print("-----------------------",file=file)
 

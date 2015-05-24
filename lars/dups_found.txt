@@ -1,16 +1,22 @@
 a set of dups
-sample 2/c/file2
------------------------
-a set of dups
-sample 2/c/file1
------------------------
-a set of dups
+sample 2/a
+sample 2/a copy
 -----------------------
 a set of dups
 sample 2/b_copy
 sample 2/b
 -----------------------
 a set of dups
-sample 2/a
-sample 2/a copy
+sample 2/c/file1
+non-toplevel occurences: sample 2/b_copy/file 1
+non-toplevel occurences: sample 2/b/file1
+non-toplevel occurences: sample 2/a/file 1
+non-toplevel occurences: sample 2/a copy/file1
+-----------------------
+a set of dups
+sample 2/c/file2
+non-toplevel occurences: sample 2/b_copy/file2
+non-toplevel occurences: sample 2/b/file2
+non-toplevel occurences: sample 2/a/file2
+non-toplevel occurences: sample 2/a copy/file2
 -----------------------
