@@ -9,7 +9,8 @@ if __name__=="__main__":
 
     print(os.listdir("."))
     target=input("please enter a filename to be scanned for duplicates:")
-    call("fdupes -r "+target+" > fdupes_output.txt",shell=True)
+    print("target:" + target)
+    call("fdupes -r \""+target+"\" > fdupes_output.txt",shell=True)
 
     with open("fdupes_output.txt") as file:
         id=0

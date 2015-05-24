@@ -247,7 +247,7 @@ class Node:
             folder=path[1]
             for child in self.children:
                 if folder==child.name:
-                    return child.dfs_search_for_path(path(1,len(path)))
+                    return child.dfs_search_for_path(path[1:len(path)])
             raise Exception("the path does not exist in the tree")
         else:
             return self
@@ -264,7 +264,7 @@ class Node:
             folder=path[1]
             for child in self.children:
                 if folder==child.name:
-                    return child.dfs_search_for_path(path[1:len(path)])
+                    return child.dfs_search_for_partial_path(path[1:len(path)])
             return self
         else:
             return self
@@ -366,13 +366,13 @@ if __name__=="__main__":
 
 
     print("testing the tree")
-    root=Node(False,[],"sample",-1)
+    root=Node(False,[],"sample 2",-1)
     tree=Tree(root)
     for i in range(3):
-        node=Node(False,["sample"],"subfolder"+str(i),-1)
+        node=Node(False,["sample 2"],"subfolder"+str(i),-1)
         tree.insert(node)
         for j in range(3):
-            node=Node(True,["sample","subfolder"+str(i)],"ssubsubfolder"+str(i)+str(j),-1)
+            node=Node(True,["sample 2","subfolder"+str(i)],"ssubsubfolder"+str(i)+str(j),-1)
             tree.insert(node)
 
     tree.print_graphml("test.graphml")
