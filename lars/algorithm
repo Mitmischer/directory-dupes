@@ -1,5 +1,5 @@
 1. find duplicates with fdupes
-2. assign each duplicate an idea (shared among duplicates, unique for each group)
+2. assign each duplicate an id (shared among duplicates, unique for each group)
 3. order duplicates by their path
 4. create a tree of the paths that contain duplicates
 
@@ -8,7 +8,7 @@
 #the tree is going to be huge, many folders are probably not important
 #therefore the next step is meant to thin out the tree
 
-! instead of removing: a flag is set that this cant be a duplicate
+! instead of removing: a flag is set that this can't be a duplicate
 
 5. go through the tree with dfs:
     look at each node
