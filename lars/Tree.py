@@ -68,14 +68,16 @@ class Tree:
             print("there are folders or files with the same checksum")
 
             # traverse the tree, each node compares its own checksum to the list of duplicate checksums
-            duplicates=self.root.dfs_find_toplevel_duplicates(duplicate_checksums,duplicates)
+            duplicates=self.root.dfs_find_toplevel_duplicates(duplicate_checksums,duplicates, True)
 
             #write results to file
             file=open(filename,"w")
             for key in duplicates:
                 print("a set of dups",file=file)
                 for value in duplicates[key]:
-                    print("/".join(value.path)+"/"+value.name,file=file)
+                    (toplevel,node)=value
+                    if toplevel:
+                        print("/".join(node.path)+"/"+node.name,file=file)
 
                 print("-----------------------",file=file)
 
@@ -214,25 +216,31 @@ class Node:
             dups_list=child.dfs_search_for_checksum(checksum,dups_list)
         return dups_list
 
-    def dfs_find_toplevel_duplicates(self,checksum_list, duplicates):
+    def dfs_find_toplevel_duplicates(self,checksum_list, duplicates, toplevel):
         """
         compares the checksum of all nodes (dfs) to the checksum_list,
-        if a match is found, the dfs returns
-        only the most toplevel match is appended to the dict of duplicates
+        if a match is found, the dfs continues
+        all duplicates are appended to the dict, but the toplevel dups are marked as such
         :param duplicates: a dict of duplicates
         :param checksum_list: a list of duplicate checksums
-        :rtype:{]
+        :param toplevel: boolean flag, is this inside of a duplicate, or outside
+        :rtype:{}
         """
         checksum_string=self.checksum.digest()
 
         if checksum_string in checksum_list:
             if checksum_string in duplicates:
-                duplicates[checksum_string].append(self)
+                duplicates[checksum_string].append((toplevel,self))
             else:
-                duplicates[checksum_string]=[self]
-        else:
+                duplicates[checksum_string]=[(toplevel,self)]
+
+            # this is the most toplevel duplicate, still look at all the other files
             for child in self.children:
-                duplicates=child.dfs_find_toplevel_duplicates(checksum_list,duplicates)
+                duplicates=child.dfs_find_toplevel_duplicates(checksum_list,duplicates, False)
+        else:
+            # no duplicate found so far, lets continue the dfs
+            for child in self.children:
+                duplicates=child.dfs_find_toplevel_duplicates(checksum_list,duplicates, True)
         return duplicates
 
     def dfs_search_for_path(self,path):
