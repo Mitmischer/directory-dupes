@@ -5,8 +5,7 @@ from Tree import Node
 from subprocess import call
 import os
 
-if __name__=="__main__":
-
+def main():
     print(os.listdir("."))
     target=input("please enter a filename to be scanned for duplicates:")
     print("target:" + target)
@@ -29,6 +28,16 @@ if __name__=="__main__":
             # split the line into path and filename
             parts=line.split("/")
             path=parts[0:-1]
+
+            # special considerations for paths starting with /
+
+            if path[0]=="":
+                path[1]="/"+path[1]
+                path=path[1:-1]
+            else:
+                path[1]="./"+path[1]
+                path=path[1:-1]
+
             path_string="/".join(path)
             name=parts[-1]
             new_node=Node(True,path,name,id)
@@ -36,3 +45,6 @@ if __name__=="__main__":
 
         tree.print_graphdot("test.graphdot")
         tree.find_toplevel_duplicates("dups_found.txt")
+
+if __name__=="__main__":
+    main()

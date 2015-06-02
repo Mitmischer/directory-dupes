@@ -329,6 +329,7 @@ class Node:
         for child in self.children:
             #print(("".join(self.path)+self.name).replace("/","_").replace("\n","")+"->"+("".join(child.path)+child.name).replace("/","_").replace("\n","")+";",file=file)
             print("\""+"/".join(self.path)+"/"+self.name+"\""+"->"+"\""+"/".join(child.path)+"/"+child.name+"\"",file=file)
+            #print("\""+self.name+"\""+"->"+"\""+child.name+"\"",file=file)
             child.dfs_print_graphdot(file)
 
     def dfs_treeshake(self):
@@ -347,8 +348,8 @@ class Node:
 
         # each child in the tree was created by fdupes and is a potential duplicate
         # if there are more subfolders / files in this dir than there are children, this is not a duplicate
-        num_files=os.listdir("./"+"/".join(self.path)+"/"+self.name+"")
-        print(os.listdir("./"+"/".join(self.path)+"/"+self.name+""))
+        num_files=os.listdir("/".join(self.path)+"/"+self.name+"")
+        print(os.listdir("/".join(self.path)+"/"+self.name+""))
         if len(num_files)>len(self.children):
             self.potentialDup=False
             return False
